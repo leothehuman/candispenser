@@ -6,6 +6,11 @@ from os.path import isfile, join
 from random import choice
 from notifiers import get_notifier
 
+with open('telegram_notifier_token', 'r') as file:
+    token = file.read()
+with open('telegram_chat_id', 'r') as file:
+    chat_id = file.read()
+
 path = '/home/pi/sounds'
 sounds = [f for f in listdir(path) if isfile(join(path, f))]
 mixer.init()
@@ -83,12 +88,12 @@ try:
             sleep(1)
             GPIO.output(ENA, GPIO.HIGH)
             if steps < max_steps:
-                telegram.notify(message = 'Dispensed after ' + str(steps) + ' steps', token = '1487867467:AAE0q6bg5TrW9j4XV-UDgZpTNREsfCfFNVs', chat_id = 268663377)
+                telegram.notify(message = 'Dispensed after ' + str(steps) + ' steps', token = token, chat_id = chat_id)
                 print("  Dispensed after", steps, "steps")
                 while measure() < CLOSE:
                     sleep(1)
             else:
-                telegram.notify(message = 'FAILED TO DISPENSE', token = '1487867467:AAE0q6bg5TrW9j4XV-UDgZpTNREsfCfFNVs', chat_id = 268663377)
+                telegram.notify(message = 'FAILED TO DISPENSE', token = token, chat_id = chat_id)
                 print("  FAILED TO DISPENSE!!!")
             while channel.get_busy():
                 sleep(0.1)
