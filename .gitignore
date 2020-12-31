@@ -1,0 +1,4 @@
+telegram_notifier_token
+*.pyc
+*.wav
+*.mkv
