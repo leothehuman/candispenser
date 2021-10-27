@@ -30,7 +30,7 @@ try:
         
         distance = (time.time() - pulse_start) * 17150
 
-        print "Distance: ",round(distance,2)," cm"
+        print("Distance: ",round(distance,2)," cm")
         time.sleep(1)
 finally:
     GPIO.cleanup()

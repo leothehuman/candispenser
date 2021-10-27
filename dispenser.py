@@ -5,15 +5,7 @@ from os import listdir
 from os.path import isfile, join
 from random import choice
 from notifiers import get_notifier
-
-with open('telegram_notifier_token', 'r') as file:
-    token = file.read()
-with open('telegram_chat_id', 'r') as file:
-    chat_id = file.read()
-
-path = '/home/pi/sounds'
-sounds = [f for f in listdir(path) if isfile(join(path, f))]
-mixer.init()
+from datetime import datetime
 
 SENS = 4
 TRIG = 23
@@ -21,8 +13,10 @@ ECHO = 24
 DIR = 20   # Direction GPIO Pin
 STEP = 21  # Step GPIO Pin
 ENA = 16   # Enable GPIO Pin
-CW = 1     # Clockwise Rotation
-CCW = 0    # Counterclockwise Rotation
+CW = 0     # Clockwise Rotation
+CCW = 1    # Counterclockwise Rotation
+FWD = CCW
+BKW = 1 - FWD
 
 GPIO.setmode(GPIO.BCM)
 
@@ -38,8 +32,10 @@ GPIO.output(TRIG, GPIO.LOW)
 GPIO.output(ENA, GPIO.HIGH)
 
 delay = .0208 / 2 / 16
-max_steps = 8000;
+max_steps_till_contact = 8000;
 telegram = get_notifier('telegram')
+
+CLOSE = 30
 
 def step(delay1, delay2):
     GPIO.output(STEP, GPIO.HIGH)
@@ -47,7 +43,7 @@ def step(delay1, delay2):
     GPIO.output(STEP, GPIO.LOW)
     sleep(delay2)
 
-def measure():
+def measure(prev):
     sleep(0.1)
     GPIO.output(TRIG, GPIO.HIGH)
     sleep(0.00001)
@@ -61,41 +57,77 @@ def measure():
     while GPIO.input(ECHO):
         pass
     distance = (time() - pulse_start) * 17150
-    print("Distance:", int(distance), "cm   ", end = ('\n' if distance < CLOSE else '\r'))
+    print("Distance:", int(distance), "cm   ", end = ('\n' if bool(distance < CLOSE) ^ bool(prev) else '\r'))
     return distance
 
-CLOSE = 30
-triggered = 0
+def steps(sdir, delay1, delay2, smin, smax, cond):
+    GPIO.output(DIR, sdir)
+    s = 0
+    while s < smin or (cond() and s < smax):
+        s += 1
+        step(delay1, delay2)
+    return s
+
+with open('telegram_notifier_token', 'r') as file:
+    token = file.read().strip()
+with open('telegram_chat_id', 'r') as file:
+    chat_id = file.read().strip()
+
+path = '/home/pi/sounds'
+sounds = [f for f in listdir(path) if isfile(join(path, f))]
+sound = None
+channel = None
+sound_start_time = datetime.now()
+mixer.init()
 
 try:
     while True:
-        distance = measure()
-        if distance < CLOSE:
-            triggered += 1
-        else:
-            triggered = 0
-        if triggered > 2:
-            channel = mixer.Sound(join(path, choice(sounds))).play()
-            triggered = 0
-            print("Dispensing...")
-            GPIO.output(ENA, GPIO.LOW)
-            steps = 0
-            while GPIO.input(SENS) and steps < max_steps:
-                steps += 1
-                step(delay, delay)
-            while not GPIO.input(SENS):
-                step(delay, delay * 3)
-            sleep(1)
-            GPIO.output(ENA, GPIO.HIGH)
-            if steps < max_steps:
-                telegram.notify(message = 'Dispensed after ' + str(steps) + ' steps', token = token, chat_id = chat_id)
-                print("  Dispensed after", steps, "steps")
-                while measure() < CLOSE:
-                    sleep(1)
+        untriggered = 0
+        while untriggered < 3:
+            distance = measure(untriggered < 3)
+            if distance > CLOSE:
+                untriggered += 1
             else:
-                telegram.notify(message = 'FAILED TO DISPENSE', token = token, chat_id = chat_id)
-                print("  FAILED TO DISPENSE!!!")
-            while channel.get_busy():
-                sleep(0.1)
+                untriggered = 0
+            sleep(0.1)
+        print("Ready for a bucket!")
+
+        triggered = 0
+        while triggered < 3:
+            distance = measure(triggered > 2)
+            if distance < CLOSE:
+                triggered += 1
+            else:
+                triggered = 0
+        print("Triggered!")
+
+        if channel and channel.get_busy():
+            print("Still playing", sound)
+        else:
+            print("Done with", sound, "after", datetime.now() - sound_start_time)
+            sound = choice(sounds)
+            print("Playing", sound)
+            sound_start_time = datetime.now()
+            channel = mixer.Sound(join(path, sound)).play()
+
+        print("Dispensing...")
+        try:
+            GPIO.output(ENA, GPIO.LOW)
+            steps_till_clear = steps(BKW, delay, delay, 10, 1000, lambda: not GPIO.input(SENS))
+            steps_till_contact = steps(FWD, delay, delay, 0, max_steps_till_contact, lambda: GPIO.input(SENS))
+            clear_steps = steps(FWD, delay, delay * 3, 50, 500, lambda: not GPIO.input(SENS))
+            backup_steps = steps(BKW, delay, delay, 10, 100, lambda: not GPIO.input(SENS))
+        finally:
+            GPIO.output(ENA, GPIO.HIGH)
+
+        step_counts = str(steps_till_contact) + ' steps and ' + str(clear_steps) + ' clear steps and ' + str(backup_steps) +' backup steps'
+        if steps_till_contact < max_steps_till_contact:
+            message = 'Dispensed after ' + step_counts
+            # telegram.notify(message = message, token = token, chat_id = chat_id)
+            print(" ", message)
+        else:
+            message = 'FAILED after ' + step_counts
+            telegram.notify(message = message, token = token, chat_id = chat_id)
+            print(" ", message)
 finally:
     GPIO.cleanup()
