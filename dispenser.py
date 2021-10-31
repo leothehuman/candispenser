@@ -1,4 +1,9 @@
 import RPi.GPIO as GPIO
+import board
+import neopixel
+from adafruit_led_animation.animation.sparklepulse import SparklePulse
+from adafruit_led_animation.animation.solid import Solid
+from adafruit_led_animation.animation.blink import Blink
 from time import time, sleep
 from pygame import mixer
 from os import listdir
@@ -35,7 +40,10 @@ delay = .0208 / 2 / 16
 max_steps_till_contact = 8000;
 telegram = get_notifier('telegram')
 
-CLOSE = 30
+FAR = 30
+CLOSE = 25
+
+pixels = neopixel.NeoPixel(board.D18, 30, auto_write = False)
 
 def step(delay1, delay2):
     GPIO.output(STEP, GPIO.HIGH)
@@ -59,7 +67,7 @@ def measure(prev):
     while GPIO.input(ECHO):
         pass
     distance = (time() - pulse_start) * 17150
-    print("Distance:", int(distance), "cm   ", end = ('\n' if bool(distance < CLOSE) ^ bool(prev) else '\r'))
+    print("Distance:", int(distance), "cm   ", end = ('\n' if bool(distance > FAR) and bool(prev) or bool(distance < CLOSE) and not bool(prev) else '\r'))
     return distance
 
 def steps(sdir, delay1, delay2, smin, smax, cond):
@@ -68,6 +76,7 @@ def steps(sdir, delay1, delay2, smin, smax, cond):
     while s < smin or (cond() and s < smax):
         s += 1
         step(delay1, delay2)
+        animation.animate()
     return s
 
 with open('telegram_notifier_token', 'r') as file:
@@ -84,15 +93,21 @@ mixer.init()
 
 try:
     while True:
+        animation = Blink(pixels, color = (255, 0, 0), speed = 0.1)
         untriggered = 0
         while untriggered < 3:
             distance = measure(untriggered < 3)
-            if distance > CLOSE:
+            if distance > FAR:
                 untriggered += 1
             else:
                 untriggered = 0
+            animation.animate()
             sleep(0.1)
         print("Ready for a bucket!")
+
+        animation = Solid(pixels, color = (0, 0, 0))
+        animation.animate()
+        animation = SparklePulse(pixels, speed = 0.1, color = (255, 70, 0), period = 5, min_intensity = 0.2, max_intensity = 0.5)
 
         triggered = 0
         while triggered < 3:
@@ -101,6 +116,7 @@ try:
                 triggered += 1
             else:
                 triggered = 0
+            animation.animate()
             sleep(0.1)
         print("Triggered!")
 
@@ -113,12 +129,13 @@ try:
             sound_start_time = datetime.now()
             channel = mixer.Sound(join(path, sound)).play()
 
+        animation = Solid(pixels, color = (0, 255, 0))
         print("Dispensing...")
         try:
             GPIO.output(ENA, GPIO.LOW)
-            steps_till_clear = steps(BKW, delay, delay, 10, 1000, lambda: not GPIO.input(SENS))
+            steps_till_clear = steps(BKW, delay, delay, 0, 100, lambda: not GPIO.input(SENS))
             steps_till_contact = steps(FWD, delay, delay, 0, max_steps_till_contact, lambda: GPIO.input(SENS))
-            clear_steps = steps(FWD, delay, delay * 3, 50, 500, lambda: not GPIO.input(SENS))
+            clear_steps = steps(FWD, delay, delay, 200, 500, lambda: not GPIO.input(SENS))
             backup_steps = steps(BKW, delay, delay, 10, 100, lambda: not GPIO.input(SENS))
         finally:
             GPIO.output(ENA, GPIO.HIGH)
