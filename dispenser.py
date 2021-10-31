@@ -53,6 +53,8 @@ def measure(prev):
     echo_delay = 0
     while not GPIO.input(ECHO) and echo_delay < MAX_DELAY:
         echo_delay += 1
+    if not echo_delay < MAX_DELAY:
+        return 1000
     pulse_start = time()
     while GPIO.input(ECHO):
         pass
@@ -95,10 +97,11 @@ try:
         triggered = 0
         while triggered < 3:
             distance = measure(triggered > 2)
-            if distance < CLOSE:
+            if distance < CLOSE and distance > 0:
                 triggered += 1
             else:
                 triggered = 0
+            sleep(0.1)
         print("Triggered!")
 
         if channel and channel.get_busy():
@@ -130,4 +133,4 @@ try:
             telegram.notify(message = message, token = token, chat_id = chat_id)
             print(" ", message)
 finally:
-    GPIO.cleanup()
+    pass
