@@ -40,8 +40,8 @@ delay = .0208 / 2 / 16
 max_steps_till_contact = 8000;
 telegram = get_notifier('telegram')
 
-FAR = 30
-CLOSE = 25
+FAR = 35
+CLOSE = 30
 
 pixels = neopixel.NeoPixel(board.D18, 30, auto_write = False)
 
@@ -93,7 +93,7 @@ mixer.init()
 
 try:
     while True:
-        animation = Blink(pixels, color = (255, 0, 0), speed = 0.1)
+        animation = Blink(pixels, color = (255, 0, 0), speed = 0.5)
         untriggered = 0
         while untriggered < 3:
             distance = measure(untriggered < 3)
@@ -107,7 +107,7 @@ try:
 
         animation = Solid(pixels, color = (0, 0, 0))
         animation.animate()
-        animation = SparklePulse(pixels, speed = 0.1, color = (255, 70, 0), period = 5, min_intensity = 0.2, max_intensity = 0.5)
+        animation = SparklePulse(pixels, speed = 0.05, color = (255, 70, 0), period = 0.1, min_intensity = 0.1, max_intensity = 0.7)
 
         triggered = 0
         while triggered < 3:
