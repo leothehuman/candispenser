@@ -8,7 +8,7 @@ pixels = neopixel.NeoPixel(board.D18, 30, auto_write = False)
 #animation = Pulse(pixels, speed = 0.1, color = AMBER, period = 5)
 #animation = Sparkle(pixels, speed = 0.1, color = AMBER, num_sparkles = 5)
 #animation = SparklePulse(pixels, speed = 0.1, color = AMBER, period = 5, min_intensity = 0.5, max_intensity = 0.7)
-animation = SparklePulse(pixels, speed = 0.1, color = (255, 70, 0), period = 5, min_intensity = 0.5, max_intensity = 0.7)
+animation = SparklePulse(pixels, speed = 0.05, color = (255, 70, 0), period = 0.1, min_intensity = 0.1, max_intensity = 0.7)
 while True:
         animation.animate()
 #for i in range(10):
