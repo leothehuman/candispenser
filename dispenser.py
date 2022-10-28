@@ -57,7 +57,7 @@ def measure(prev):
     sleep(0.00001)
     GPIO.output(TRIG, GPIO.LOW)
 
-    MAX_DELAY = 1000
+    MAX_DELAY = 10000
     echo_delay = 0
     while not GPIO.input(ECHO) and echo_delay < MAX_DELAY:
         echo_delay += 1
