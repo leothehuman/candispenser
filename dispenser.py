@@ -40,8 +40,8 @@ delay = .0208 / 2 / 16
 max_steps_till_contact = 8000;
 telegram = get_notifier('telegram')
 
-FAR = 35
-CLOSE = 30
+FAR = 45
+CLOSE = 40
 
 pixels = neopixel.NeoPixel(board.D18, 30, auto_write = False)
 
