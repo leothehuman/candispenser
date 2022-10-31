@@ -1,6 +1,7 @@
 import board
 import json
 import neopixel
+import paho.mqtt.client as mqtt
 import RPi.GPIO as GPIO
 import serial
 from adafruit_led_animation.animation.solid import Solid
@@ -107,6 +108,26 @@ def steps(sdir, delay1, delay2, smin, smax, cond):
 with open('secrets.json', 'r') as file:
     secrets = json.load(file)
 
+dispense_requested = False
+
+def on_message(client, userdata, message):
+    global dispense_requested
+    dispense_requested = True
+    print("Dispense requested!\n")
+def on_connect(client, userdata, flag, rc):
+    client.subscribe("cmnd/dispenser/dispense")
+    client.publish("tele/dispenser/state", "Online", 1, True)
+
+client = mqtt.Client(secrets['mqtt']['client'])
+client.username_pw_set(secrets['mqtt']['username'], secrets['mqtt']['password'])
+client.will_set("tele/dispenser/state", "Offline", 1, True)
+
+client.on_message = on_message
+client.on_connect = on_connect
+
+client.connect_async(secrets['mqtt']['host'])
+client.loop_start()
+
 path = '/home/pi/sounds'
 sounds = [f for f in listdir(path) if isfile(join(path, f))]
 sound = None
@@ -118,7 +139,7 @@ mixer.init()
 def wait_to_untrigger():
     print("Waiting for the removal of the bucket!")
     untriggered = 0
-    while untriggered < 3:
+    while untriggered < 3 and not dispense_requested:
         animation.animate()
         distance = measure(untriggered < 3)
         if distance > FAR:
@@ -132,7 +153,7 @@ def wait_to_untrigger():
 def wait_to_trigger():
     print("Ready for a bucket!")
     triggered = 0
-    while triggered < 3:
+    while triggered < 3 and not dispense_requested:
         animation.animate()
         distance = measure(triggered > 2)
         if distance < CLOSE and distance > 0:
@@ -157,7 +178,9 @@ def play_a_sound():
         channel = mixer.Sound(join(path, sound)).play()
 
 def dispense():
+    global dispense_requested
     print("Dispensing...")
+    dispense_requested = False
     try:
         GPIO.output(ENA, GPIO.LOW)
         steps_till_clear = steps(1 - FWD, delay, delay, 0, 100, lambda: not GPIO.input(SENS))
@@ -194,12 +217,15 @@ def main():
             wait_to_trigger()
 
             drop.fill(color = (0, 255, 0))
+            pixels.show()
             play_a_sound()
+            sleep(0.3)
 
             dispense()
     except KeyboardInterrupt:
         print("\rExiting...                                                  ")
     finally:
+        client.loop_stop()
         pixels.fill(color = (0, 0, 0))
         pixels.show()
         if ser != None:
