@@ -1,7 +1,6 @@
 import board
 import neopixel
 import RPi.GPIO as GPIO
-from adafruit_led_animation.animation.blink import Blink
 from adafruit_led_animation.animation.solid import Solid
 from adafruit_led_animation.animation.sparklepulse import SparklePulse
 from adafruit_led_animation.helper import PixelSubset
@@ -44,11 +43,11 @@ telegram = get_notifier('telegram')
 FAR = 45
 CLOSE = 40
 
-pixels = neopixel.NeoPixel(board.D18, 31, auto_write = False)
+pixels = neopixel.NeoPixel(board.D18, 32, auto_write = False)
 # RGB
 drop = PixelSubset(pixels, 0, 1)
 # GBR
-windows = PixelSubset(pixels, 1, 31)
+windows = PixelSubset(pixels, 1, 32)
 
 def step(delay1, delay2):
     GPIO.output(STEP, GPIO.HIGH)
@@ -167,19 +166,18 @@ def main():
     try:
         while True:
             drop.fill(color = (255, 0, 0))
-            animation = Blink(windows, color = (0, 0, 255), speed = 0.5)
+            animation = Solid(windows, color = (0, 0, 0))
             wait_to_untrigger()
 
-            drop.fill(color = (0, 255, 0))
-            animation = Solid(windows, color = (0, 0, 0))
+            drop.fill(color = (255, 255, 255))
             animation.animate()
             animation = SparklePulse(windows, speed = 0.05, color = (70, 0, 255), period = 0.1, min_intensity = 0.1, max_intensity = 0.7)
 
             wait_to_trigger()
 
+            drop.fill(color = (0, 255, 0))
             play_a_sound()
 
-            animation = Solid(windows, color = (255, 0, 0))
             dispense()
 
     finally:
