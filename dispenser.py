@@ -45,7 +45,9 @@ FAR = 45
 CLOSE = 40
 
 pixels = neopixel.NeoPixel(board.D18, 31, auto_write = False)
+# RGB
 drop = PixelSubset(pixels, 0, 1)
+# GBR
 windows = PixelSubset(pixels, 1, 31)
 
 def step(delay1, delay2):
@@ -165,19 +167,19 @@ def main():
     try:
         while True:
             drop.fill(color = (255, 0, 0))
-            animation = Blink(windows, color = (255, 0, 0), speed = 0.5)
+            animation = Blink(windows, color = (0, 0, 255), speed = 0.5)
             wait_to_untrigger()
 
             drop.fill(color = (0, 255, 0))
             animation = Solid(windows, color = (0, 0, 0))
             animation.animate()
-            animation = SparklePulse(windows, speed = 0.05, color = (255, 70, 0), period = 0.1, min_intensity = 0.1, max_intensity = 0.7)
+            animation = SparklePulse(windows, speed = 0.05, color = (70, 0, 255), period = 0.1, min_intensity = 0.1, max_intensity = 0.7)
 
             wait_to_trigger()
 
             play_a_sound()
 
-            animation = Solid(windows, color = (0, 255, 0))
+            animation = Solid(windows, color = (255, 0, 0))
             dispense()
 
     finally:
