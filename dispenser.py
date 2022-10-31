@@ -1,6 +1,7 @@
 import board
 import neopixel
 import RPi.GPIO as GPIO
+import serial
 from adafruit_led_animation.animation.solid import Solid
 from adafruit_led_animation.animation.sparklepulse import SparklePulse
 from adafruit_led_animation.helper import PixelSubset
@@ -42,7 +43,11 @@ telegram = get_notifier('telegram')
 
 FAR = 45
 CLOSE = 40
+MAX_DELAY = 10000
 
+ser = serial.Serial("/dev/ttyS0", 115200)
+if ser.is_open == False:
+    ser.open()
 pixels = neopixel.NeoPixel(board.D18, 32, auto_write = False)
 # RGB
 drop = PixelSubset(pixels, 0, 1)
@@ -60,21 +65,36 @@ def measureSonar():
     sleep(0.00001)
     GPIO.output(TRIG, GPIO.LOW)
 
-    MAX_DELAY = 10000
     echo_delay = 0
     while not GPIO.input(ECHO) and echo_delay < MAX_DELAY:
         echo_delay += 1
     if not echo_delay < MAX_DELAY:
-        return 1000
+        return MAX_DELAY
     pulse_start = time()
     while GPIO.input(ECHO):
         pass
     return (time() - pulse_start) * 17150
 
+def measureLidar():
+    global ser
+    ser.reset_input_buffer()
+    while True:
+        count = ser.in_waiting
+        if count > 8:
+            recv = ser.read(9)
+            ser.reset_input_buffer()
+            s = sum(recv[0:7], 9) % 256
+            if recv[0] == 89 and recv[1] == 89 and s == recv[8] : # 0x59 is 'Y'
+                distance = recv[2] + recv[3] * 256
+                strength = recv[4] + recv[5] * 256
+                temperature = recv[6] + recv[7] * 256
+                return (distance, strength, temperature/8 - 256)
 
 def measure(prev):
-    distance = measureSonar()
-    print("  Distance:", int(distance), "cm   ", end = ('\n' if bool(distance > FAR) and bool(prev) or bool(distance < CLOSE) and not bool(prev) else '\r'))
+    sonarDistance = measureSonar()
+    lidarDistance = measureLidar()
+    distance = lidarDistance[0] - 9 if sonarDistance > 100 else sonarDistance
+    print("  Distance:", int(distance), "cm   (lidar: ", int(lidarDistance[0]), ", sonar: ", int(sonarDistance), ")   ", end = ('\n' if bool(distance > FAR) and bool(prev) or bool(distance < CLOSE) and not bool(prev) else '\r'))
     return distance
 
 def steps(sdir, delay1, delay2, smin, smax, cond):
@@ -181,7 +201,8 @@ def main():
             dispense()
 
     finally:
-        pass
+        if ser != None:
+            ser.close()
 
 if __name__ == "__main__":
     main()
