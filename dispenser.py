@@ -20,10 +20,7 @@ ECHO = 24
 DIR = 20   # Direction GPIO Pin
 STEP = 21  # Step GPIO Pin
 ENA = 16   # Enable GPIO Pin
-CW = 0     # Clockwise Rotation
-CCW = 1    # Counterclockwise Rotation
-FWD = CCW
-BKW = 1 - FWD
+FWD = 1    # Rotation direction
 
 GPIO.setmode(GPIO.BCM)
 
@@ -34,7 +31,7 @@ GPIO.setup(ENA, GPIO.OUT)
 GPIO.setup(DIR, GPIO.OUT)
 GPIO.setup(STEP, GPIO.OUT)
 
-GPIO.output(DIR, CCW)
+GPIO.output(DIR, FWD)
 GPIO.output(TRIG, GPIO.LOW)
 GPIO.output(ENA, GPIO.HIGH)
 
@@ -163,10 +160,10 @@ def dispense():
     print("Dispensing...")
     try:
         GPIO.output(ENA, GPIO.LOW)
-        steps_till_clear = steps(BKW, delay, delay, 0, 100, lambda: not GPIO.input(SENS))
+        steps_till_clear = steps(1 - FWD, delay, delay, 0, 100, lambda: not GPIO.input(SENS))
         steps_till_contact = steps(FWD, delay, delay, 0, max_steps_till_contact, lambda: GPIO.input(SENS))
         clear_steps = steps(FWD, delay, delay, 200, 500, lambda: not GPIO.input(SENS))
-        backup_steps = steps(BKW, delay, delay, 10, 100, lambda: not GPIO.input(SENS))
+        backup_steps = steps(1 - FWD, delay, delay, 10, 100, lambda: not GPIO.input(SENS))
     finally:
         GPIO.output(ENA, GPIO.HIGH)
 
