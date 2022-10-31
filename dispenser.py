@@ -195,8 +195,11 @@ def main():
             play_a_sound()
 
             dispense()
-
+    except KeyboardInterrupt:
+        print("\rExiting...                                                  ")
     finally:
+        pixels.fill(color = (0, 0, 0))
+        pixels.show()
         if ser != None:
             ser.close()
 
