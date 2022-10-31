@@ -170,11 +170,13 @@ def dispense():
     step_counts = str(steps_till_contact) + ' steps and ' + str(clear_steps) + ' clear steps and ' + str(backup_steps) +' backup steps'
     if steps_till_contact < max_steps_till_contact:
         message = 'Dispensed after ' + step_counts
-        # telegram.notify(message = message, token = secrets['telegram']['notifier_token'], chat_id = secrets['telegram']['chat_id'])
+        # if 'telegram' in secrets:
+        #   telegram.notify(message = message, token = secrets['telegram']['notifier_token'], chat_id = secrets['telegram']['chat_id'])
         print(" ", message)
     else:
         message = 'FAILED after ' + step_counts
-        telegram.notify(message = message, token = secrets['telegram']['notifier_token'], chat_id = secrets['telegram']['chat_id'])
+        if 'telegram' in secrets:
+            telegram.notify(message = message, token = secrets['telegram']['notifier_token'], chat_id = secrets['telegram']['chat_id'])
         print(" ", message)
 
 def main():
