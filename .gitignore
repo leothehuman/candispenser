@@ -1,5 +1,4 @@
-telegram_notifier_token
-telegram_chat_id
+secrets.json
 *.pyc
 *.wav
 *.mkv

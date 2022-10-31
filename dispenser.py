@@ -1,4 +1,5 @@
 import board
+import json
 import neopixel
 import RPi.GPIO as GPIO
 import serial
@@ -106,10 +107,8 @@ def steps(sdir, delay1, delay2, smin, smax, cond):
         animation.animate()
     return s
 
-with open('telegram_notifier_token', 'r') as file:
-    token = file.read().strip()
-with open('telegram_chat_id', 'r') as file:
-    chat_id = file.read().strip()
+with open('secrets.json', 'r') as file:
+    secrets = json.load(file)
 
 path = '/home/pi/sounds'
 sounds = [f for f in listdir(path) if isfile(join(path, f))]
@@ -174,11 +173,11 @@ def dispense():
     step_counts = str(steps_till_contact) + ' steps and ' + str(clear_steps) + ' clear steps and ' + str(backup_steps) +' backup steps'
     if steps_till_contact < max_steps_till_contact:
         message = 'Dispensed after ' + step_counts
-        # telegram.notify(message = message, token = token, chat_id = chat_id)
+        # telegram.notify(message = message, token = secrets['telegram']['notifier_token'], chat_id = secrets['telegram']['chat_id'])
         print(" ", message)
     else:
         message = 'FAILED after ' + step_counts
-        telegram.notify(message = message, token = token, chat_id = chat_id)
+        telegram.notify(message = message, token = secrets['telegram']['notifier_token'], chat_id = secrets['telegram']['chat_id'])
         print(" ", message)
 
 def main():
